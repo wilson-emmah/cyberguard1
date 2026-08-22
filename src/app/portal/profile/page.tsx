@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation"; // ADDED THIS IMPORT
+import { useRouter } from "next/navigation";
 import { auth, db, storage } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, get, update } from "firebase/database";
@@ -16,14 +16,12 @@ export default function ProfilePage() {
   const [jobTitle, setJobTitle] = useState("");
   const [profilePicUrl, setProfilePicUrl] = useState("");
   const [certRequested, setCertRequested] = useState(false);
-  
-  const router = useRouter(); // ADDED THIS LINE
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) { router.push("/login"); } 
       else {
-        // ... rest of the code remains exactly the same
         const snapshot = await get(ref(db, 'users/' + currentUser.uid));
         if (snapshot.exists()) {
           const data = snapshot.val();
@@ -36,28 +34,33 @@ export default function ProfilePage() {
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file || !user) return;
+    const file = e.target.files?.[0]; 
+    if (!file || !user) return;
+    
     setUploadingPic(true);
     try {
       const imgRef = storageRef(storage, `profile_pictures/${user.uid}`);
       await uploadBytes(imgRef, file);
       const downloadUrl = await getDownloadURL(imgRef);
+      
       await update(ref(db, 'users/' + user.uid), { profilePicUrl: downloadUrl });
       setProfilePicUrl(downloadUrl);
-    } catch (error) { console.error("Upload error:", error); } 
-    finally { setUploadingPic(false); }
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      // Show an alert so you know exactly why it failed
+      alert("Failed to upload image: " + error.message); 
+    } finally {
+      setUploadingPic(false);
+    }
   };
 
   const handleRequestCertificate = async () => {
     if (!user) return; setSaving(true);
     try {
-      await update(ref(db, 'users/' + user.uid), { 
-        firstName, lastName, jobTitle, 
-        certificateRequested: true 
-      });
+      await update(ref(db, 'users/' + user.uid), { firstName, lastName, jobTitle, certificateRequested: true });
       setCertRequested(true);
       alert("Certificate request submitted! An admin will review and email it to you soon.");
     } catch (error) { console.error("Save error:", error); } 
@@ -69,28 +72,24 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-black text-slate-900">Profile Settings</h1>
-      
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Profile Settings</h1>
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="flex flex-col items-center">
-            <div className="w-40 h-40 rounded-full bg-slate-100 border-4 border-slate-200 overflow-hidden flex items-center justify-center mb-4">
-              {profilePicUrl ? <img src={profilePicUrl} alt="Profile" className="w-full h-full object-cover" /> : <i className="fas fa-user text-5xl text-slate-300"></i>}
+            <div className="w-40 h-40 rounded-full bg-slate-100 dark:bg-slate-700 border-4 border-slate-200 dark:border-slate-600 overflow-hidden flex items-center justify-center mb-4">
+              {profilePicUrl ? <img src={profilePicUrl} alt="Profile" className="w-full h-full object-cover" /> : <i className="fas fa-user text-5xl text-slate-300 dark:text-slate-400"></i>}
             </div>
             <label className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition text-sm cursor-pointer disabled:opacity-50">
               {uploadingPic ? "Uploading..." : "Upload Picture"}
               <input type="file" onChange={handleFileChange} accept="image/*" className="hidden" />
             </label>
           </div>
-          
           <div className="md:col-span-2 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label className="block text-xs font-bold text-slate-700 uppercase mb-2">First Name</label><input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" /></div>
-              <div><label className="block text-xs font-bold text-slate-700 uppercase mb-2">Last Name</label><input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-2">First Name</label><input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-2">Last Name</label><input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white" /></div>
             </div>
-            <div><label className="block text-xs font-bold text-slate-700 uppercase mb-2">Job Title / Role</label><input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" /></div>
-            
-            {/* Certificate Request Area */}
+            <div><label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-2">Job Title / Role</label><input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white" /></div>
             <div className={`mt-6 p-4 rounded-lg border ${certRequested ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
               {certRequested ? (
                 <div className="flex items-center gap-3 text-yellow-800">

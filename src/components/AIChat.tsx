@@ -27,18 +27,18 @@ export default function AIChat() {
         <i className={`fas ${isOpen ? 'fa-times' : 'fa-robot'} text-xl`}></i>
       </button>
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-80 h-96 bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col z-50">
+        <div className="fixed bottom-24 right-6 w-80 h-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col z-50">
           <div className="bg-slate-900 text-white p-4 rounded-t-xl flex items-center gap-2"><i className="fas fa-robot"></i><h3 className="font-bold">CyberGuard AI Coach</h3></div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-2 rounded-lg text-sm ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-900'}`}>{msg.text}</div>
+                <div className={`max-w-[80%] p-2 rounded-lg text-sm ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white'}`}>{msg.text}</div>
               </div>
             ))}
-            {loading && <div className="text-center text-slate-500 text-sm"><i className="fas fa-spinner fa-spin mr-2"></i>Thinking...</div>}
+            {loading && <div className="text-center text-slate-500 dark:text-slate-400 text-sm"><i className="fas fa-spinner fa-spin mr-2"></i>Thinking...</div>}
           </div>
-          <div className="p-3 border-t border-slate-200 flex gap-2">
-            <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500" placeholder="Ask a security question..." />
+          <div className="p-3 border-t border-slate-200 dark:border-slate-700 flex gap-2">
+            <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 dark:bg-slate-900 rounded-lg text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white" placeholder="Ask a security question..." />
             <button onClick={sendMessage} className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"><i className="fas fa-paper-plane"></i></button>
           </div>
         </div>
