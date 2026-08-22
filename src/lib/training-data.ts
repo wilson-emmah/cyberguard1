@@ -47,3 +47,12 @@ export const badges = [
   { id: "defender", name: "Defender", icon: "fa-shield-halved", requirement: "Reach Level 2" },
   { id: "secure", name: "Secure", icon: "fa-lock", requirement: "Complete Password Training" }
 ];
+
+// Gamification Level Mapping
+export const getLevelName = (level: number) => {
+  if (level <= 1) return "Cyber Beginner";
+  if (level === 2) return "Cyber Aware";
+  if (level === 3) return "Security Defender";
+  if (level === 4) return "Cyber Guardian";
+  return "Cyber Expert";
+};
