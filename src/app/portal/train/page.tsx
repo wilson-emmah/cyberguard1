@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue } from "firebase/database";
+import { doc, onSnapshot, collection } from "firebase/firestore"; // Updated to Firestore
 
 export default function LearningPathPage() {
   const [user, setUser] = useState<any>(null);
@@ -21,17 +21,35 @@ export default function LearningPathPage() {
   const router = useRouter();
 
   useEffect(() => {
+    let unsubUser = () => {};
+    let unsubScen = () => {};
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) router.push("/login");
-      else {
-        onValue(ref(db, 'users/' + currentUser.uid), (snapshot) => setUser({ ...snapshot.val(), uid: currentUser.uid }));
-        onValue(ref(db, 'scenarios'), (snapshot) => {
-          const data = snapshot.val() || {};
-          setScenarios(Object.keys(data).map(key => ({ id: key, ...data[key] })));
+      if (!currentUser) {
+        router.push("/login");
+      } else {
+        // Listen to User Document in Firestore
+        unsubUser = onSnapshot(doc(db, 'users', currentUser.uid), (docSnap) => {
+          if (docSnap.exists()) {
+            setUser({ ...docSnap.data(), uid: currentUser.uid });
+          } else {
+            setUser({ uid: currentUser.uid });
+          }
+        });
+
+        // Listen to Scenarios Collection in Firestore
+        unsubScen = onSnapshot(collection(db, 'scenarios'), (snapshot) => {
+          setScenarios(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
         });
       }
     });
-    return () => unsubscribe();
+    
+    // Cleanup listeners on unmount
+    return () => {
+      unsubscribe();
+      unsubUser();
+      unsubScen();
+    };
   }, [router]);
 
   if (!user) return <div className="p-8 text-blue-600 font-bold">Loading...</div>;
