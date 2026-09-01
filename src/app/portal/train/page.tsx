@@ -1,23 +1,33 @@
 "use client";
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+}
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, onValue } from "firebase/database";
-import { scenarios } from "@/lib/training-data";
 
 export default function LearningPathPage() {
   const [user, setUser] = useState<any>(null);
+  const [scenarios, setScenarios] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) { router.push("/login"); } 
+      if (!currentUser) router.push("/login");
       else {
-        onValue(ref(db, 'users/' + currentUser.uid), (snapshot) => {
-          const data = snapshot.val() || { email: currentUser.email, completedModules: {} };
-          setUser({ ...data, uid: currentUser.uid });
+        onValue(ref(db, 'users/' + currentUser.uid), (snapshot) => setUser({ ...snapshot.val(), uid: currentUser.uid }));
+        onValue(ref(db, 'scenarios'), (snapshot) => {
+          const data = snapshot.val() || {};
+          setScenarios(Object.keys(data).map(key => ({ id: key, ...data[key] })));
         });
       }
     });
@@ -26,58 +36,42 @@ export default function LearningPathPage() {
 
   if (!user) return <div className="p-8 text-blue-600 font-bold">Loading...</div>;
 
+  const levels = ["Beginner", "Intermediate", "Advanced"];
+
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900 mb-8">Cybersecurity Training Path</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-8">Cybersecurity Training Path</h1>
       
-      <div className="relative">
-        {/* Vertical Line */}
-        <div className="absolute left-5 top-2 bottom-2 w-0.5 bg-slate-200"></div>
+      {levels.map((level) => {
+        const levelScenarios = scenarios.filter(s => s.level === level);
+        if (levelScenarios.length === 0) return null; // Hide level if admin hasn't added scenarios yet
 
-        {scenarios.map((scenario, index) => {
-          const isCompleted = user.completedModules && user.completedModules[scenario.id];
-          const isInProgress = user.lastModuleId === scenario.id && !isCompleted;
-          const isLocked = index > 0 && !isCompleted && !isInProgress; // Basic locking logic
-          
-          return (
-            <div key={scenario.id} className="relative flex items-center mb-8">
-              {/* Node */}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm z-10 border-2 ${
-                isCompleted ? 'bg-green-500 border-green-500 text-white' : 
-                isInProgress ? 'bg-blue-50 border-blue-500 text-blue-600' : 
-                'bg-white border-slate-300 text-slate-400'
-              }`}>
-                {isCompleted ? <i className="fas fa-check"></i> : String(index + 1).padStart(2, '0')}
-              </div>
-
-              {/* Card */}
-              <div className={`ml-6 flex-1 p-5 rounded-xl border bg-white card-shadow ${isLocked ? 'opacity-60' : 'hover:border-blue-400 transition'}`}>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-lg">{scenario.title}</h3>
-                    <p className="text-sm text-slate-500 mt-1">{scenario.description}</p>
+        return (
+          <div key={level} className="mb-12">
+            <h2 className="text-xl font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-6 border-b pb-2 border-slate-200 dark:border-slate-700">{level} Level</h2>
+            <div className="relative">
+              <div className="absolute left-5 top-2 bottom-2 w-0.5 bg-slate-200 dark:bg-slate-700"></div>
+              {levelScenarios.map((scenario) => {
+                const isCompleted = user.completedModules && user.completedModules[scenario.id];
+                return (
+                  <div key={scenario.id} className="relative flex items-center mb-8">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm z-10 border-2 ${isCompleted ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-slate-300 text-slate-400'}`}>
+                      {isCompleted ? <i className="fas fa-check"></i> : <i className="fas fa-lock"></i>}
+                    </div>
+                    <div className={`ml-6 flex-1 p-5 rounded-xl border bg-white dark:bg-slate-800 card-shadow ${!isCompleted ? 'opacity-60' : 'hover:border-blue-400'}`}>
+                      <div className="flex justify-between items-center">
+                        <div><h3 className="font-bold text-slate-900 dark:text-white text-lg">{scenario.title}</h3><p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{scenario.description}</p></div>
+                        <div className="text-right"><span className={`text-xs font-bold px-2 py-1 rounded ${isCompleted ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{isCompleted ? "COMPLETED" : "LOCKED"}</span><p className="text-xs font-bold text-red-500 mt-2">+{scenario.points} Points</p></div>
+                      </div>
+                      {isCompleted && <Link href={`/portal/train/${scenario.id}`} className="mt-4 inline-block text-sm font-bold text-blue-600 hover:underline">Review Module <i className="fas fa-arrow-right ml-1"></i></Link>}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${
-                      isCompleted ? 'bg-green-100 text-green-700' : 
-                      isInProgress ? 'bg-blue-100 text-blue-700' : 
-                      'bg-slate-100 text-slate-500'
-                    }`}>
-                      {isCompleted ? "COMPLETED" : isInProgress ? "IN PROGRESS" : "LOCKED"}
-                    </span>
-                    <p className="text-xs font-bold text-red-500 mt-2">+{scenario.points} Points</p>
-                  </div>
-                </div>
-                {!isLocked && (
-                  <Link href={`/portal/train/${scenario.id}`} className="mt-4 inline-block text-sm font-bold text-blue-600 hover:underline">
-                    {isCompleted ? "Review Module" : "Start Assessment"} <i className="fas fa-arrow-right ml-1"></i>
-                  </Link>
-                )}
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -4,11 +4,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue } from "firebase/database";
+import { doc, onSnapshot, collection, query, orderBy, limit } from "firebase/firestore";
 import { scenarios, getLevelName } from "@/lib/training-data";
 
 export default function PortalDashboard() {
   const [user, setUser] = useState<any>(null);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -16,11 +17,21 @@ export default function PortalDashboard() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) { router.push("/login"); } 
       else {
-        onValue(ref(db, 'users/' + currentUser.uid), (snapshot) => {
-          const data = snapshot.val() || { email: currentUser.email, points: 0, level: 1, completedModules: {} };
-          setUser({ ...data, uid: currentUser.uid });
+        // Listen to user document in Firestore
+        const unsubUser = onSnapshot(doc(db, 'users', currentUser.uid), (docSnap) => {
+          if (docSnap.exists()) {
+            setUser({ ...docSnap.data(), uid: currentUser.uid });
+          }
           setLoading(false);
         });
+
+        // Listen to top 5 users ordered by points for the leaderboard
+        const lbQuery = query(collection(db, 'users'), orderBy('points', 'desc'), limit(5));
+        const unsubLb = onSnapshot(lbQuery, (snapshot) => {
+          setLeaderboard(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        return () => { unsubUser(); unsubLb(); };
       }
     });
     return () => unsubscribe();
@@ -42,21 +53,21 @@ export default function PortalDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow transition-colors duration-200">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow">
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Level</p>
           <div className="flex items-end gap-2 mt-2">
             <p className="text-4xl font-black text-slate-900 dark:text-white">{String(user.level || 1).padStart(2, '0')}</p>
             <p className="text-sm font-bold text-blue-600 mb-1">{levelName}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow transition-colors duration-200">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow">
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Points</p>
           <div className="flex items-end gap-2 mt-2">
             <p className="text-4xl font-black text-slate-900 dark:text-white">{user.points || 0}</p>
             <p className="text-sm font-bold text-green-600 mb-1">Earned</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow transition-colors duration-200">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow">
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Security Score</p>
           <div className="flex items-end gap-2 mt-2">
             <p className="text-4xl font-black text-slate-900 dark:text-white">{progressPercent}%</p>
@@ -65,7 +76,7 @@ export default function PortalDashboard() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow transition-colors duration-200">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow">
         <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4">Training Progress</h2>
         <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 mb-2">
           <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${progressPercent}%` }}></div>
@@ -74,12 +85,10 @@ export default function PortalDashboard() {
         
         {continueTarget && (
           <Link href={`/portal/train/${continueTarget.id}`} className="mt-6 block bg-blue-50 dark:bg-slate-700 border border-blue-200 dark:border-slate-600 rounded-lg p-4 flex items-center justify-between hover:bg-blue-100 dark:hover:bg-slate-600 transition">
-            <div className="flex items-center gap-4">
-              <i className="fas fa-lock text-blue-600 text-xl"></i>
-              <div>
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{continueTarget.title}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Your next recommended module</p>
-              </div>
+            <div>
+              <p className="text-xs font-bold text-blue-600 uppercase">Continue Learning</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white mt-1">{continueTarget.title}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Your next recommended module</p>
             </div>
             <div className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg flex items-center gap-2">
               Continue <i className="fas fa-arrow-right"></i>
@@ -88,41 +97,19 @@ export default function PortalDashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow transition-colors duration-200">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4">Security Tasks</h2>
-          <ul className="space-y-3 text-sm">
-            <li className="flex items-center gap-2 text-slate-500 dark:text-slate-400 line-through">
-              <i className="fas fa-check-circle text-green-500"></i> Complete phishing assessment
-            </li>
-            <li className="flex items-center gap-2 text-slate-500 dark:text-slate-400 line-through">
-              <i className="fas fa-check-circle text-green-500"></i> Check suspicious URL
-            </li>
-            <li className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
-              <i className="far fa-circle text-slate-300 dark:text-slate-500"></i> Complete malware assessment
-            </li>
-            <li className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
-              <i className="far fa-circle text-slate-300 dark:text-slate-500"></i> Complete final assessment
-            </li>
-          </ul>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow transition-colors duration-200">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4">Recent Activity</h2>
-          <ul className="space-y-4 text-sm">
-            <li className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              Phishing assessment completed
-            </li>
-            <li className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-              Badge earned
-            </li>
-            <li className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              Password security module completed
-            </li>
-          </ul>
+      {/* Live Leaderboard from Firestore Query */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 card-shadow">
+        <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <i className="fas fa-trophy text-red-500"></i> Top Defenders
+        </h2>
+        <div className="space-y-3">
+          {leaderboard.map((entry, index) => (
+            <div key={entry.id} className={`flex items-center space-x-3 p-2 rounded-md ${entry.id === user.uid ? 'bg-blue-50 border border-blue-200' : 'hover:bg-slate-50'}`}>
+              <span className={`w-6 h-6 flex items-center justify-center text-xs font-bold rounded-full ${index === 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}`}>{index + 1}</span>
+              <span className="text-sm font-medium text-slate-900 flex-1 truncate">{entry.id === user.uid ? "You" : entry.email?.split('@')[0]}</span>
+              <span className="text-sm font-semibold text-red-600">{entry.points || 0} pts</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
