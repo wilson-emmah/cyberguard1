@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore"; // Firestore imports
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -11,22 +11,22 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [uploadingPic, setUploadingPic] = useState(false);
   const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [profilePicUrl, setProfilePicUrl] = useState("");
   const [certRequested, setCertRequested] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) { router.push("/login"); } 
+      if (!currentUser) router.push("/login");
       else {
-        // Fetch from Firestore
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
           setUser({ ...data, uid: currentUser.uid });
-          setFirstName(data.firstName || ""); 
-          setProfilePicUrl(data.profilePicUrl || "");
-          setCertRequested(data.certificateRequested || false);
+          setFirstName(data.firstName || ""); setLastName(data.lastName || ""); setJobTitle(data.jobTitle || "");
+          setProfilePicUrl(data.profilePicUrl || ""); setCertRequested(data.certificateRequested || false);
         }
         setLoading(false);
       }
@@ -35,35 +35,33 @@ export default function ProfilePage() {
   }, [router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; 
-    if (!file || !user) return;
-    
+    const file = e.target.files?.[0]; if (!file || !user) return;
     setUploadingPic(true);
     const reader = new FileReader();
     reader.onloadend = async () => {
       try {
         const base64String = reader.result as string;
-        // Update Firestore document
         await updateDoc(doc(db, 'users', user.uid), { profilePicUrl: base64String });
         setProfilePicUrl(base64String);
-      } catch (error) {
-        alert("Failed to upload image.");
-      } finally {
-        setUploadingPic(false);
-      }
+      } catch (error) { alert("Failed to upload image."); } finally { setUploadingPic(false); }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleSaveBiodata = async () => {
+    if (!user) return; setSaving(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { firstName, lastName, jobTitle });
+      alert("Biodata saved successfully!");
+    } catch (error) { alert("Error saving details."); } finally { setSaving(false); }
   };
 
   const handleRequestCertificate = async () => {
     if (!user) return; setSaving(true);
     try {
-      // Update Firestore document
-      await updateDoc(doc(db, 'users', user.uid), { firstName, certificateRequested: true });
-      setCertRequested(true);
-      alert("Certificate request submitted! Admin will review it.");
-    } catch (error) { alert("Error saving details."); } 
-    finally { setSaving(false); }
+      await updateDoc(doc(db, 'users', user.uid), { firstName, lastName, jobTitle, certificateRequested: true });
+      setCertRequested(true); alert("Certificate request submitted!");
+    } catch (error) { alert("Error requesting certificate."); } finally { setSaving(false); }
   };
 
   if (loading) return <div className="p-8 text-blue-500 font-bold">Loading profile...</div>;
@@ -71,7 +69,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Profile Settings</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Profile & Certificate</h1>
       <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="flex flex-col items-center">
@@ -84,14 +82,20 @@ export default function ProfilePage() {
             </label>
           </div>
           <div className="md:col-span-2 space-y-4">
-            <div><label className="block text-xs font-bold text-slate-700 uppercase mb-2">Full Name</label><input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><label className="block text-xs font-bold text-slate-700 uppercase mb-2">First Name</label><input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" /></div>
+              <div><label className="block text-xs font-bold text-slate-700 uppercase mb-2">Last Name</label><input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" /></div>
+            </div>
+            <div><label className="block text-xs font-bold text-slate-700 uppercase mb-2">Job Title / Role</label><input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" /></div>
+            <button onClick={handleSaveBiodata} disabled={saving} className="px-6 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900">{saving ? "Saving..." : "Save Biodata"}</button>
+            
             <div className={`mt-6 p-4 rounded-lg border ${certRequested ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
               {certRequested ? (
                 <div className="flex items-center gap-3 text-yellow-800"><i className="fas fa-clock text-xl"></i><div><p className="font-bold">Certificate Requested</p><p className="text-sm">Pending admin approval.</p></div></div>
               ) : (
                 <div>
-                  <p className="text-sm text-blue-800 mb-3">Submit a request to the admin to generate your certificate.</p>
-                  <button onClick={handleRequestCertificate} disabled={saving} className="px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">{saving ? "Submitting..." : "Request Certificate"}</button>
+                  <p className="text-sm text-blue-800 mb-3">Ensure your biodata is correct. Submit to request certificate.</p>
+                  <button onClick={handleRequestCertificate} disabled={saving} className="px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Request Certificate</button>
                 </div>
               )}
             </div>

@@ -1,14 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, addDoc } from "firebase/firestore"; // Added addDoc and collection
 
 export default function AdminCerts() {
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
-      // Cast to any to prevent TypeScript strict errors
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
       setPendingUsers(data.filter(u => u.certificateRequested === true));
     });
@@ -16,8 +15,18 @@ export default function AdminCerts() {
   }, []);
 
   const handleApprove = async (uid: string) => {
+    // Update Firestore document
     await updateDoc(doc(db, 'users', uid), { certificateRequested: false, certApproved: true });
-    alert("Certificate Approved! (Mock Email Sent)");
+    
+    // SEND SPECIFIC NOTIFICATION TO THE USER
+    await addDoc(collection(db, 'notifications'), {
+      target: uid,
+      message: "Your certificate has been approved by the Admin!",
+      read: false,
+      timestamp: Date.now()
+    });
+
+    alert("Certificate Approved! Notification sent to user.");
   };
 
   return (

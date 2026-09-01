@@ -35,7 +35,7 @@ export default function AdminScenarios() {
     setOptions(newOptions);
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
+   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -52,8 +52,16 @@ export default function AdminScenarios() {
         newScenario.correctAnswer = Number(correctAnswer);
       }
 
-      // Add to Firestore 'scenarios' collection
-      await addDoc(collection(db, 'scenarios'), newScenario);
+      const docRef = await addDoc(collection(db, 'scenarios'), newScenario);
+      
+      // SEND GLOBAL NOTIFICATION TO ALL USERS
+      await addDoc(collection(db, 'notifications'), {
+        target: 'all',
+        message: `New training scenario added: ${title}`,
+        read: false,
+        timestamp: Date.now()
+      });
+
       alert("Scenario uploaded successfully!");
       setTitle(""); setDescription(""); setSender(""); setSubject(""); setBody(""); setRedFlags(""); setQuestion("");
       

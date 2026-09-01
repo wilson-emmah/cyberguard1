@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore"; // Firestore imports
+import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
 import AIChat from "@/components/AIChat";
-import "@fortawesome/fontawesome-free/css/all.min.css";
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -20,14 +20,21 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) { router.push("/login"); } 
       else {
-        // Listen to Firestore document
         const unsubUser = onSnapshot(doc(db, 'users', currentUser.uid), (docSnap) => {
           const data = docSnap.data() || { email: currentUser.email };
           if (data.role === 'ADMIN') router.push('/admin');
           setUser({ ...data, uid: currentUser.uid });
           setLoading(false);
         });
-        return () => unsubUser();
+
+        // Listen for user-specific or global notifications
+        const notifQuery = query(collection(db, 'notifications'), where('target', 'in', [currentUser.uid, 'all']));
+        const unsubNotif = onSnapshot(notifQuery, (snapshot) => {
+          // Count unread notifications
+          setUnreadNotifs(snapshot.docs.filter(d => !d.data().read).length);
+        });
+
+        return () => { unsubUser(); unsubNotif(); };
       }
     });
     const savedTheme = localStorage.getItem("theme") || "light";
@@ -85,6 +92,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-16 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
           <div className="flex items-center gap-4"><button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-slate-600 dark:text-slate-300 text-xl"><i className="fas fa-bars"></i></button><h1 className="text-lg font-bold text-slate-800 dark:text-white">User Portal</h1></div>
           <div className="flex items-center gap-4 md:gap-6">
+            
+            {/* NOTIFICATION BELL */}
+            <div className="relative p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+              <i className="fas fa-bell text-slate-600 dark:text-slate-300 text-lg"></i>
+              {unreadNotifs > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs}</span>
+              )}
+            </div>
+
             <div className="flex items-center gap-2 cursor-pointer">
               <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center text-slate-500 font-bold text-sm border border-slate-300">
                 {user.profilePicUrl ? <img src={user.profilePicUrl} alt="Pic" className="w-full h-full object-cover" /> : <i className="fas fa-user"></i>}
