@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { ref, get } from "firebase/database";
-import "../globals.css"; // Import global css from parent
-import "@fortawesome/fontawesome-free/css/all.min.css";
 import { doc, getDoc } from "firebase/firestore";
+import "../globals.css"; // Keep Tailwind CSS
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -16,7 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (!currentUser) {
+      if (!currentUser) {
         router.push("/admin/login");
       } else {
         // Fetch Admin role from Firestore
@@ -36,10 +35,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (loading) return <div className="min-h-screen flex items-center justify-center text-blue-600 font-bold">Verifying Admin Credentials...</div>;
   if (!user) return null;
 
+  // The Font Awesome CDN Link
+  const faCdn = <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />;
+
   // Hide sidebar on the login page
   if (pathname === '/admin/login') {
     return (
       <html lang="en">
+        <head>{faCdn}</head>
         <body className="bg-slate-900">{children}</body>
       </html>
     );
@@ -55,6 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <html lang="en">
+      <head>{faCdn}</head>
       <body className="bg-slate-100">
         <div className="min-h-screen flex">
           {/* Dark Sidebar for Admin */}
