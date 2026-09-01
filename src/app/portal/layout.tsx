@@ -92,6 +92,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <span className="text-sm font-medium text-slate-700 dark:text-slate-200 capitalize hidden sm:block">{user.email.split('@')[0]}</span>
             </div>
           </div>
+        
         </header>
         <div className="p-4 md:p-8">{children}</div>
       </main>
