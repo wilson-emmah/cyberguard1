@@ -2,19 +2,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
-import { ref, onValue } from "firebase/database";
+import { collection, onSnapshot } from "firebase/firestore";
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [pendingCerts, setPendingCerts] = useState(0);
 
   useEffect(() => {
-    onValue(ref(db, 'users'), (snapshot) => {
-      const data = snapshot.val() || {};
-      const arr = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+    // Listen to the 'users' collection in Firestore
+    const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const arr = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setUsers(arr);
       setPendingCerts(arr.filter(u => u.certificateRequested).length);
     });
+    return () => unsub();
   }, []);
 
   return (
