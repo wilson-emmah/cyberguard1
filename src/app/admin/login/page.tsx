@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { ref, get } from "firebase/database";
+import { doc, getDoc } from "firebase/firestore"; // Changed to Firestore imports
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -19,13 +19,17 @@ export default function AdminLoginPage() {
     setError("");
     
     try {
+      // 1. Authenticate with Firebase
       const userCred = await signInWithEmailAndPassword(auth, email, password);
-      const snapshot = await get(ref(db, 'users/' + userCred.user.uid));
-      const data = snapshot.val();
+      
+      // 2. Strictly check if they are an Admin in the Firestore Database
+      const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
+      const data = userDoc.data();
       
       if (data && data.role === 'ADMIN') {
-        router.push("/admin");
+        router.push("/admin"); // Let them into the separate admin system
       } else {
+        // Kick them out if they are a standard user
         await auth.signOut(); 
         setError("Access Denied. You do not have Administrator privileges.");
       }
@@ -52,20 +56,40 @@ export default function AdminLoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Admin Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-red-500" required />
+            <input 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-red-500" 
+              required 
+            />
           </div>
           
           <div className="mb-6">
             <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Password</label>
             <div className="relative">
-              <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:border-red-500" required />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="w-full px-4 py-3 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:border-red-500" 
+                required 
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)} 
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
                 <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
               </button>
             </div>
           </div>
           
-          <button type="submit" disabled={loading} className="w-full py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+          >
             {loading ? "Authorizing..." : "Sign In to Admin"}
           </button>
         </form>
