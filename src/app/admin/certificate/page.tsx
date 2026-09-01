@@ -1,20 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { ref, onValue, update } from "firebase/database";
+import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 
 export default function AdminCerts() {
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    onValue(ref(db, 'users'), (snapshot) => {
-      const data = snapshot.val() || {};
-      setPendingUsers(Object.keys(data).map(key => ({ id: key, ...data[key] })).filter(u => u.certificateRequested));
+    const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
+      // Cast to any to prevent TypeScript strict errors
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setPendingUsers(data.filter(u => u.certificateRequested === true));
     });
+    return () => unsub();
   }, []);
 
   const handleApprove = async (uid: string) => {
-    await update(ref(db, 'users/' + uid), { certificateRequested: false, certApproved: true });
+    await updateDoc(doc(db, 'users', uid), { certificateRequested: false, certApproved: true });
     alert("Certificate Approved! (Mock Email Sent)");
   };
 

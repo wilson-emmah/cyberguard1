@@ -9,11 +9,11 @@ export default function AdminDashboard() {
   const [pendingCerts, setPendingCerts] = useState(0);
 
   useEffect(() => {
-    // Listen to the 'users' collection in Firestore
     const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const arr = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Cast to any to prevent TypeScript strict errors
+      const arr = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
       setUsers(arr);
-      setPendingCerts(arr.filter(u => u.certificateRequested).length);
+      setPendingCerts(arr.filter(u => u.certificateRequested === true).length);
     });
     return () => unsub();
   }, []);

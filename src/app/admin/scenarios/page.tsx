@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { ref, push, onValue } from "firebase/database";
 import { collection, addDoc, onSnapshot } from "firebase/firestore";
+
 export default function AdminScenarios() {
   const [scenarios, setScenarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,10 +23,10 @@ export default function AdminScenarios() {
   const [correctAnswer, setCorrectAnswer] = useState(0);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'scenarios'), (snapshot) => {
-      const scenariosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setScenarios(scenariosData);
+    const unsub = onSnapshot(collection(db, 'scenarios'), (snapshot) => {
+      setScenarios(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+    return () => unsub();
   }, []);
 
   const handleOptionChange = (index: number, value: string) => {
@@ -35,7 +35,7 @@ export default function AdminScenarios() {
     setOptions(newOptions);
   };
 
-    const handleUpload = async (e: React.FormEvent) => {
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
