@@ -7,37 +7,17 @@ export default function UserManagement() {
   const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    // Listen to the 'users' collection in Firestore
     const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
       setUsers(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
   }, []);
 
-  // CSV Download Logic
   const exportToCSV = () => {
     if (users.length === 0) return;
-
-    // Define the CSV headers
     const headers = ["Email", "Role", "Points", "Level", "Certificate Requested", "Certificate Approved"];
-    
-    // Map user data to match headers
-    const rows = users.map(u => [
-      u.email || "N/A",
-      u.role || "USER",
-      u.points || 0,
-      u.level || 1,
-      u.certificateRequested ? "Yes" : "No",
-      u.certApproved ? "Yes" : "No"
-    ]);
-
-    // Combine headers and rows into a CSV string
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(field => `"${field}"`).join(",")) // Wrap fields in quotes to escape commas
-    ].join("\n");
-
-    // Create a Blob and trigger a download
+    const rows = users.map(u => [u.email || "N/A", u.role || "USER", u.points || 0, u.level || 1, u.certificateRequested ? "Yes" : "No", u.certApproved ? "Yes" : "No"]);
+    const csvContent = [headers.join(","), ...rows.map(row => row.map(field => `"${field}"`).join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -53,10 +33,7 @@ export default function UserManagement() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
         <div className="flex gap-2">
-          <button 
-            onClick={exportToCSV} 
-            className="px-4 py-2 bg-slate-800 text-white font-bold rounded-lg text-sm hover:bg-slate-900 flex items-center gap-2"
-          >
+          <button onClick={exportToCSV} className="px-4 py-2 bg-slate-800 text-white font-bold rounded-lg text-sm hover:bg-slate-900 flex items-center gap-2">
             <i className="fas fa-file-csv"></i> Export to CSV
           </button>
           <button className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2">
