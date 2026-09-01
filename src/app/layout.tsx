@@ -1,35 +1,20 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import "@fortawesome/fontawesome-free/css/all.min.css"; // Added Font Awesome
-import Link from "next/link"; // Added for Navbar/Footer links
+import Link from "next/link";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
+export const metadata = {
   title: "CyberGuard | Security Awareness Training",
   description: "Interactive cybersecurity training for individuals and teams.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning // Added to prevent React hydration errors with the theme script
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Font Awesome CDN */}
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+        {/* Google Fonts */}
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-        
-        {/* Script to prevent white flash on dark mode load */}
+        {/* Dark Mode Prevention Script */}
         <script dangerouslySetInnerHTML={{
           __html: `
             (function() {
@@ -48,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col bg-gray-50 text-slate-900 dark:bg-slate-900 dark:text-white">
         
         {/* Public Navbar */}
-        <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 dark:bg-slate-800 dark:border-slate-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
             <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
