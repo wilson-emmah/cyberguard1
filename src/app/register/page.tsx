@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { ref, set } from "firebase/database";
+import { doc, setDoc } from "firebase/firestore"; // Updated to Firestore imports
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -27,9 +27,19 @@ export default function RegisterPage() {
       // Send Email Verification
       await sendEmailVerification(userCredential.user);
       
-      // Save to DB
-      await set(ref(db, 'users/' + userId), { email, points: 0, level: 1, role: 'USER' });
-      await set(ref(db, 'leaderboard/' + userId), { username: email.split('@')[0], points: 0 });
+      // Save to Firestore
+      await setDoc(doc(db, 'users', userId), { 
+        email, 
+        points: 0, 
+        level: 1, 
+        role: 'USER' 
+      });
+      
+      // Save to Leaderboard collection in Firestore
+      await setDoc(doc(db, 'leaderboard', userId), { 
+        username: email.split('@')[0], 
+        points: 0 
+      });
       
       router.push("/portal");
     } catch (err: any) { setError(err.message.replace("Firebase: ", "")); } 
@@ -93,7 +103,9 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition disabled:opacity-50">{loading ? "Creating account..." : "Register & Start"}</button>
+          <button type="submit" disabled={loading} className="w-full py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+            {loading ? "Creating account..." : "Register & Start"}
+          </button>
         </form>
         <p className="text-xs text-slate-400 mt-4 text-center">A verification link will be sent to your email.</p>
       </div>
