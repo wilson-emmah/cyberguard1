@@ -6,7 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore"; // Firestore imports
 import AIChat from "@/components/AIChat";
-import "@fortawesome/fontawesome-free/css/all.min.css";
+
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
