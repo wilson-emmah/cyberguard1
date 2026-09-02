@@ -5,8 +5,7 @@ import { collection, onSnapshot, doc, updateDoc, addDoc } from "firebase/firesto
 
 export default function AdminCerts() {
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
-
-  useEffect(() => {
+ useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
       setPendingUsers(data.filter(u => u.certificateRequested === true));
