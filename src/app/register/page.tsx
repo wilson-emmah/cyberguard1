@@ -21,7 +21,7 @@ export default function RegisterPage() {
     if (password !== confirm) { setError("Passwords do not match"); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true); setError("");
-    try {
+       try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const userId = userCredential.user.uid;
       
@@ -36,6 +36,16 @@ export default function RegisterPage() {
         role: 'USER' 
       });
       
+      // ADDED BACK: Save to Leaderboard collection
+      await setDoc(doc(db, 'leaderboard', userId), { 
+        username: email.split('@')[0], 
+        points: 0 
+      });
+      
+      // Route directly to login page
+      alert("Registration successful! Please sign in.");
+      router.push("/login");
+    } catch (err: any) { 
       // Route directly to login page to ensure clean session
       alert("Registration successful! Please sign in.");
       router.push("/login");
