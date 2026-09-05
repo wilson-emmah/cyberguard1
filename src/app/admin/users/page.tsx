@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { db, auth } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function UserManagement() {
@@ -27,16 +27,36 @@ export default function UserManagement() {
     } catch (error: any) { alert(error.message); } finally { setLoading(false); }
   };
 
+  const handleResetProgress = async (id: string) => {
+    if (confirm("Reset this user's points and completed modules?")) {
+      await updateDoc(doc(db, 'users', id), { points: 0, level: 1, completedModules: {} });
+      alert("User progress reset.");
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (confirm("Permanently delete this user's database record?")) {
+      await deleteDoc(doc(db, 'users', id));
+      alert("User deleted. (Note: Auth account may need manual deletion in Firebase Console).");
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
         <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"><i className="fas fa-user-plus"></i> Create User</button>
       </div>
+
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
-            <tr><th className="p-4 text-xs font-bold text-slate-500 uppercase">Email</th><th className="p-4 text-xs font-bold text-slate-500 uppercase">Role</th><th className="p-4 text-xs font-bold text-slate-500 uppercase">Points</th><th className="p-4 text-xs font-bold text-slate-500 uppercase">Action</th></tr>
+            <tr>
+              <th className="p-4 text-xs font-bold text-slate-500 uppercase">Email</th>
+              <th className="p-4 text-xs font-bold text-slate-500 uppercase">Role</th>
+              <th className="p-4 text-xs font-bold text-slate-500 uppercase">Points</th>
+              <th className="p-4 text-xs font-bold text-slate-500 uppercase">Actions</th>
+            </tr>
           </thead>
           <tbody>
             {users.map(u => (
@@ -44,7 +64,11 @@ export default function UserManagement() {
                 <td className="p-4 font-medium text-slate-800">{u.email}</td>
                 <td className="p-4"><span className={`text-xs font-bold px-2 py-1 rounded ${u.role === 'ADMIN' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{u.role || 'USER'}</span></td>
                 <td className="p-4 font-bold text-slate-700">{u.points || 0}</td>
-                <td className="p-4"><button onClick={async () => { await updateDoc(doc(db, 'users', u.id), { role: u.role === 'ADMIN' ? 'USER' : 'ADMIN' }); }} className="text-blue-600 font-bold text-sm hover:underline">Toggle Role</button></td>
+                <td className="p-4 flex gap-3">
+                  <button onClick={async () => { await updateDoc(doc(db, 'users', u.id), { role: u.role === 'ADMIN' ? 'USER' : 'ADMIN' }); }} className="text-blue-600 font-bold text-xs hover:underline">Toggle Role</button>
+                  <button onClick={() => handleResetProgress(u.id)} className="text-amber-600 font-bold text-xs hover:underline">Reset Progress</button>
+                  <button onClick={() => handleDeleteUser(u.id)} className="text-red-600 font-bold text-xs hover:underline">Delete</button>
+                </td>
               </tr>
             ))}
           </tbody>
