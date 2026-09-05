@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link"; // Added Link import
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore"; // Updated to Firestore imports
+import { doc, setDoc } from "firebase/firestore";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -11,8 +12,8 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // State for Password eye
-  const [showConfirm, setShowConfirm] = useState(false); // State for Confirm eye
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,14 +36,12 @@ export default function RegisterPage() {
         role: 'USER' 
       });
       
-      // Save to Leaderboard collection in Firestore
-      await setDoc(doc(db, 'leaderboard', userId), { 
-        username: email.split('@')[0], 
-        points: 0 
-      });
-      
-      router.push("/portal");
-    } catch (err: any) { setError(err.message.replace("Firebase: ", "")); } 
+      // Route directly to login page to ensure clean session
+      alert("Registration successful! Please sign in.");
+      router.push("/login");
+    } catch (err: any) { 
+      setError(err.message.replace("Firebase: ", "")); 
+    } 
     finally { setLoading(false); }
   };
 
@@ -50,15 +49,25 @@ export default function RegisterPage() {
     <div className="min-h-[70vh] flex items-center justify-center bg-blue-50 px-4">
       <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl border border-blue-100">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-xl bg-red-600 flex items-center justify-center text-3xl mx-auto mb-4 shadow-md"><i className="fas fa-user-plus text-white"></i></div>
+          <div className="w-16 h-16 rounded-xl bg-red-600 flex items-center justify-center text-3xl mx-auto mb-4 shadow-md">
+            <i className="fas fa-user-plus text-white"></i>
+          </div>
           <h2 className="text-2xl font-black text-slate-900">Create Account</h2>
           <p className="text-sm text-slate-500 mt-1">Start your security training</p>
         </div>
+        
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold">{error}</div>}
+        
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required />
+            <input 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" 
+              required 
+            />
           </div>
           
           {/* Password Field with Eye Icon */}
@@ -103,11 +112,27 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition disabled:opacity-50">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+          >
             {loading ? "Creating account..." : "Register & Start"}
           </button>
         </form>
+
         <p className="text-xs text-slate-400 mt-4 text-center">A verification link will be sent to your email.</p>
+
+        {/* ADDED: Quick Sign In Link */}
+        <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+          <p className="text-sm text-slate-600">
+            Already have an account?{" "}
+            <Link href="/login" className="text-blue-600 hover:text-blue-700 font-bold hover:underline">
+              Sign In
+            </Link>
+          </p>
+        </div>
+
       </div>
     </div>
   );
